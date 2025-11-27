@@ -25,6 +25,9 @@ This project ingests biotech earnings call transcripts, scores sentiment, and li
 7. Add text stats: `python src/features/compute_text_stats.py --config config/config.yaml`
 8. Explore: run `streamlit run app.py` or open `notebooks/01_exploration.ipynb`.
 
+## Dashboard Preview
+![Streamlit dashboard](assets/streamlit-dashboard.png)
+
 ## Repository Structure
 ```
 .
