@@ -18,13 +18,23 @@ def download_price_history(tickers: Iterable[str], start: str, end: str) -> pd.D
     """Download adjusted close prices for tickers using yfinance."""
     tickers = list(tickers)
     data = yf.download(tickers, start=start, end=end, auto_adjust=True, progress=False)
-    if isinstance(data, pd.DataFrame) and "Adj Close" in data.columns:
-        prices = data["Adj Close"].copy()
-    else:
-        prices = data.copy()
 
-    if isinstance(prices, pd.Series):
-        prices = prices.to_frame(name=tickers[0])
+    # Handle the different shapes returned by yfinance:
+    # - MultiIndex columns when requesting multiple tickers
+    # - Single-index columns for one ticker
+    if isinstance(data, pd.DataFrame):
+        if isinstance(data.columns, pd.MultiIndex):
+            if "Adj Close" in data.columns.get_level_values(0):
+                prices = data["Adj Close"].copy()
+            else:
+                prices = data["Close"].copy()
+        else:
+            if "Adj Close" in data.columns:
+                prices = data["Adj Close"].to_frame(name=tickers[0])
+            else:
+                prices = data["Close"].to_frame(name=tickers[0])
+    else:  # Single series
+        prices = data.to_frame(name=tickers[0])
 
     prices.index = pd.to_datetime(prices.index)
     return prices

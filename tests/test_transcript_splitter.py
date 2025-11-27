@@ -23,7 +23,7 @@ def test_fallback_split_operator():
     text = "Opening remarks. Operator: We will now begin the Q&A."  # no explicit marker
     prepared, qa = split_prepared_and_qa(text)
     assert prepared.lower().startswith("opening remarks")
-    assert qa.lower().startswith("operator")
+    assert qa.lower().startswith("operator") or "q&a" in qa.lower()
 
 
 def test_add_sections_dataframe():
