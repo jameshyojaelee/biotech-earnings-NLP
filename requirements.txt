@@ -1,0 +1,13 @@
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+transformers
+datasets
+yfinance
+pyyaml
+tqdm
+scipy
+statsmodels
+streamlit

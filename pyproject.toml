@@ -1,0 +1,11 @@
+[project]
+name = "earnings-nlp"
+version = "0.1.0"
+description = "Biotech earnings call NLP and event study pipeline"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = []
+
+[tool.setuptools]
+package-dir = {"" = "src"}

@@ -1,0 +1,26 @@
+# Run tests: pytest -q
+from pathlib import Path
+import sys
+
+import pandas as pd
+
+sys.path.append(str(Path(__file__).resolve().parents[1] / "src"))
+from finance.returns import compute_event_window_returns  # noqa: E402
+
+
+def test_compute_event_window_returns():
+    dates = pd.date_range("2024-01-01", periods=6, freq="D")
+    prices = pd.DataFrame(
+        {
+            "AAA": [10, 11, 11.5, 11.5, 12, 12],
+            "XBI": [10, 10.5, 10.5, 10.6, 10.7, 10.8],
+        },
+        index=dates,
+    )
+
+    events = pd.DataFrame({"ticker": ["AAA"], "earnings_date": [dates[0]]})
+    out = compute_event_window_returns(events, prices, benchmark_ticker="XBI", window_days=[1, 5])
+
+    assert "ret_1d" in out.columns
+    assert abs(out.loc[0, "ret_1d"] - 0.1) < 1e-6
+    assert abs(out.loc[0, "abn_ret_1d"] - 0.05) < 1e-6
