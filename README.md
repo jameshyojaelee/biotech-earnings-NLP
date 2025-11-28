@@ -25,11 +25,13 @@ This project ingests biotech earnings call transcripts, scores sentiment, and li
   $AR_{window} = R_{stock,window} - R_{benchmark,window}$  
   (isolates firm-specific reaction by netting out sector moves)
 - **Tone shift**  
-  $toneshift = sentiment_{Q\\&A} - sentiment_{prepared}$  
+  $tone\_shift = sentiment_{Q\\&A} - sentiment_{prepared}$  
   (positive = tone improves under Q&A; negative = tone worsens)
 - Optional if available: **earnings surprise**  
   $Surprise = EPS_{actual} - EPS_{consensus}$  
   (control for beat/miss when testing language effects)
+  
+**Notation**: \(P_{t-1}\) = prior close; \(P_t\) = current close; \(P_{\text{start}}\)/\(P_{\text{end}}\) = prices at window bounds; \(R_{stock,window}\) = stock return over the window; \(R_{benchmark,window}\) = benchmark return (XBI) over the same window; \(sentiment_{Q\&A}\), \(sentiment_{prepared}\) are FinBERT sentiment scores for Q&A and prepared remarks.
 
 ## Pipeline Overview
 1. **Transcripts**: Load HuggingFace dataset `glopardo/sp500-earnings-transcripts` and filter to Health Care.
