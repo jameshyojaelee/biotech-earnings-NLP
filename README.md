@@ -1,5 +1,8 @@
 # Earnings NLP for Biotech
 
+### Dashboard Preview
+![Streamlit dashboard](assets/streamlit-dashboard.png)
+
 This project ingests biotech earnings call transcripts, scores sentiment, and links language to stock reactions around the event date. It focuses on the Q&A section because unscripted answers often reveal incremental information beyond the prepared remarks.
 
 ## Motivation & Approach
@@ -53,9 +56,6 @@ This project ingests biotech earnings call transcripts, scores sentiment, and li
 - Set `hf_dataset_revision` in `config/config.yaml` to pin the HuggingFace dataset commit. The ingest step logs the revision used.
 - Prices are cached per ticker under `price_cache_dir` (default `data_raw/prices`). Pass `--refresh-cache` to `compute_returns_for_events.py` to force a redownload.
 - Saved analysis artifacts: plots live in `assets/plots/` and summary tables (e.g., regression coefficients) in `data_processed/` when you run the analysis notebook or `save_figs_and_tables` script.
-
-## Dashboard Preview
-![Streamlit dashboard](assets/streamlit-dashboard.png)
 
 ## Repository Structure
 ```
