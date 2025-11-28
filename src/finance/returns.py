@@ -43,11 +43,35 @@ def download_price_history(tickers: Iterable[str], start: str, end: str) -> pd.D
 def _price_on_or_before(prices: pd.DataFrame, ticker: str, date: pd.Timestamp) -> Optional[float]:
     if ticker not in prices.columns:
         return None
-    series = prices[ticker].dropna()
+    series = prices[ticker].dropna().sort_index()
     available = series.loc[series.index <= date]
     if available.empty:
         return None
     return float(available.iloc[-1])
+
+
+def _price_on_or_after(
+    prices: pd.DataFrame,
+    ticker: str,
+    date: pd.Timestamp,
+    offset_to_next_business_day: bool = False,
+) -> Optional[float]:
+    """Return the earliest available price on or after `date`.
+
+    If `offset_to_next_business_day` is True, the search starts from the next
+    business day rather than the provided date.
+    """
+    if offset_to_next_business_day:
+        date = pd.Timestamp(date) + pd.offsets.BDay()
+
+    if ticker not in prices.columns:
+        return None
+
+    series = prices[ticker].dropna().sort_index()
+    available = series.loc[series.index >= date]
+    if available.empty:
+        return None
+    return float(available.iloc[0])
 
 
 def compute_event_window_returns(
@@ -73,9 +97,9 @@ def compute_event_window_returns(
             end_date = event_date + pd.Timedelta(days=window)
 
             base_price = _price_on_or_before(prices, row.ticker, event_date)
-            end_price = _price_on_or_before(prices, row.ticker, end_date)
+            end_price = _price_on_or_after(prices, row.ticker, end_date)
             bench_base = _price_on_or_before(prices, benchmark_ticker, event_date)
-            bench_end = _price_on_or_before(prices, benchmark_ticker, end_date)
+            bench_end = _price_on_or_after(prices, benchmark_ticker, end_date)
 
             if base_price is None or end_price is None:
                 stock_returns.append(np.nan)

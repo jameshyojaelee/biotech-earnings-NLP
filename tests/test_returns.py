@@ -24,3 +24,21 @@ def test_compute_event_window_returns():
     assert "ret_1d" in out.columns
     assert abs(out.loc[0, "ret_1d"] - 0.1) < 1e-6
     assert abs(out.loc[0, "abn_ret_1d"] - 0.05) < 1e-6
+
+
+def test_forward_window_uses_next_trading_day():
+    dates = pd.bdate_range("2024-01-05", periods=3)  # Fri, Mon, Tue
+    prices = pd.DataFrame(
+        {
+            "AAA": [10.0, 12.0, 12.5],
+            "XBI": [20.0, 21.0, 21.5],
+        },
+        index=dates,
+    )
+
+    events = pd.DataFrame({"ticker": ["AAA"], "earnings_date": [dates[0]]})
+    out = compute_event_window_returns(events, prices, benchmark_ticker="XBI", window_days=[1])
+
+    # Forward 1d window (Saturday) should use Monday's price, not Friday's.
+    assert abs(out.loc[0, "ret_1d"] - 0.2) < 1e-6
+    assert abs(out.loc[0, "abn_ret_1d"] - 0.15) < 1e-6
