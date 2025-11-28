@@ -32,3 +32,5 @@ htmlcov/
 # Data outputs
 data_raw/
 data_processed/
+
+project_overview.pdf
