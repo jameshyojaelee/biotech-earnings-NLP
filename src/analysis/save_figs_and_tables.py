@@ -6,10 +6,9 @@ import argparse
 from pathlib import Path
 
 import matplotlib
-import matplotlib.pyplot as plt
 import pandas as pd
-import seaborn as sns
 
+from .eda import plot_box_by_sentiment_bucket, plot_histograms, plot_scatter_sentiment_vs_returns, set_plot_style
 from .models import (
     ensure_beat_miss_flag,
     load_features,
@@ -22,42 +21,17 @@ matplotlib.use("Agg")  # headless
 
 
 def save_histograms(df: pd.DataFrame, out_dir: Path) -> None:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    for col in [c for c in ["abn_ret_1d", "abn_ret_5d", "ret_1d", "ret_5d"] if c in df.columns]:
-        plt.figure(figsize=(5, 4))
-        sns.histplot(df[col].dropna(), kde=True)
-        plt.title(col)
-        plt.tight_layout()
-        plt.savefig(out_dir / f"hist_{col}.png", dpi=150)
-        plt.close()
+    plot_histograms(df, cols=[c for c in ["abn_ret_1d", "abn_ret_5d", "ret_1d", "ret_5d"] if c in df.columns], show=False, save_dir=out_dir)
 
 
 def save_scatter_plots(df: pd.DataFrame, out_dir: Path) -> None:
-    out_dir.mkdir(parents=True, exist_ok=True)
     for ret_col in [c for c in ["abn_ret_1d", "abn_ret_5d"] if c in df.columns]:
-        plt.figure(figsize=(5, 4))
-        sns.scatterplot(data=df, x="qa_sent_score", y=ret_col)
-        plt.axhline(0, color="grey", linestyle="--", linewidth=1)
-        plt.axvline(0, color="grey", linestyle="--", linewidth=1)
-        plt.title(f"qa_sent_score vs {ret_col}")
-        plt.tight_layout()
-        plt.savefig(out_dir / f"scatter_qa_sent_vs_{ret_col}.png", dpi=150)
-        plt.close()
+        plot_scatter_sentiment_vs_returns(df, return_col=ret_col, show=False, save_path=out_dir / f"scatter_qa_sent_vs_{ret_col}.png")
 
 
 def save_boxplots(df: pd.DataFrame, out_dir: Path) -> None:
-    out_dir.mkdir(parents=True, exist_ok=True)
-    df = df.dropna(subset=["qa_sent_score"]).copy()
-    if df.empty:
-        return
-    df["sent_bucket"] = pd.qcut(df["qa_sent_score"], 3, labels=["Low", "Mid", "High"])
     for ret_col in [c for c in ["abn_ret_1d", "abn_ret_5d"] if c in df.columns]:
-        plt.figure(figsize=(5, 4))
-        sns.boxplot(data=df, x="sent_bucket", y=ret_col)
-        plt.title(f"{ret_col} by sentiment tercile")
-        plt.tight_layout()
-        plt.savefig(out_dir / f"box_sent_bucket_{ret_col}.png", dpi=150)
-        plt.close()
+        plot_box_by_sentiment_bucket(df, return_col=ret_col, show=False, save_path=out_dir / f"box_sent_bucket_{ret_col}.png")
 
 
 def save_regression_tables(df: pd.DataFrame, out_dir: Path) -> None:
@@ -122,6 +96,10 @@ def main() -> None:
 
     plots_dir = Path(args.plots_dir)
     tables_dir = Path(args.tables_dir)
+    plots_dir.mkdir(parents=True, exist_ok=True)
+    tables_dir.mkdir(parents=True, exist_ok=True)
+
+    set_plot_style()
 
     save_summary_table(df, tables_dir / "summary_stats.csv")
     save_histograms(df, plots_dir)
