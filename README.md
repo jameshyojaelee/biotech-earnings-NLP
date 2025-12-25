@@ -47,9 +47,10 @@ This project ingests biotech earnings call transcripts, scores sentiment, and li
 
 ## Pipeline Overview
 1. **Transcripts**: Load HuggingFace dataset `glopardo/sp500-earnings-transcripts` and filter to Health Care.
-2. **Sentiment**: Split prepared remarks vs. Q&A, then score each with FinBERT to capture tone and tone shifts.
-3. **Event Returns**: Pull prices via `yfinance`, compute 1-day and 5-day returns plus benchmark-adjusted abnormal returns.
-4. **Analysis**: Explore distributions, run statistical tests, and build simple predictive models on language features.
+2. **Normalization**: Extract executive/analyst metadata and build speaker-level segments (timestamps when present).
+3. **Sentiment**: Split prepared remarks vs. Q&A, then score each with FinBERT to capture tone and tone shifts.
+4. **Event Returns**: Pull prices via `yfinance`, compute 1-day and 5-day returns plus benchmark-adjusted abnormal returns.
+5. **Analysis**: Explore distributions, run statistical tests, and build simple predictive models on language features.
 
 ## Methodology (more depth)
 This repo is intentionally simple and transparent: most of the “NLP” is feature engineering around (1) a pretrained sentiment model and (2) interpretable term-count features. The goal is to make it easy to iterate on domain hypotheses (e.g., “risk language in Q&A predicts downside”) without a heavy modeling stack.
@@ -77,6 +78,18 @@ Earnings calls typically have a scripted “prepared” portion followed by a le
    - or common cues like `Operator:` / `Analyst:` if explicit markers are missing
 
 Implemented in `src/preprocess/structured_split.py`, `src/preprocess/transcript_splitter.py`, and orchestrated by `src/preprocess/split_all_transcripts.py`.
+
+### 2b) Speaker segmentation + metadata normalization
+We normalize transcripts into speaker-level segments and extract metadata when available:
+- **Metadata**: parse the transcript header for executive and analyst lists.
+- **Segmentation**: split by speaker labels (e.g., `Operator:` / `Analyst:` / named speakers).
+- **Timestamps**: capture timestamps when present (e.g., `[00:01:23]`).
+
+Outputs:
+- `data_processed/events_with_metadata.parquet` (adds executive/analyst lists, segment counts)
+- `data_processed/transcript_segments.parquet` (one row per segment)
+
+Implemented in `src/preprocess/segment_transcripts.py` and `src/preprocess/normalize_transcripts.py`.
 
 ### 3) Sentiment scoring (FinBERT)
 We score sentiment separately for prepared remarks and Q&A using **FinBERT** (`ProsusAI/finbert`) through the Hugging Face `transformers` pipeline:
@@ -108,6 +121,21 @@ Outputs:
 - `qa_risk_terms`, `qa_risk_rate`
 
 Implemented in `src/features/text_stats.py` and run via `src/features/compute_text_stats.py`.
+
+### 4b) Signal extraction (trial updates, guidance changes, safety, regulatory)
+We scan Q&A text for key biotech signals:
+- **Trial updates** (phase progression, enrollment milestones, data readouts)
+- **Guidance changes** (raise/lower/reaffirm guidance or outlook)
+- **Safety signals** (adverse events, DLTs, tolerability)
+- **Regulatory mentions** (FDA/EMA, approvals, CRL, PDUFA, etc.)
+
+Outputs (added to `events_with_features.parquet`):
+- `trial_update_flag`, `trial_update_count`, `trial_update_snippets`
+- `guidance_change_flag`, `guidance_change_count`, `guidance_change_snippets`
+- `safety_signal_flag`, `safety_signal_count`, `safety_signal_snippets`
+- `regulatory_mention_flag`, `regulatory_mention_count`, `regulatory_mention_snippets`
+
+Implemented in `src/features/signal_extraction.py` and run via `src/features/compute_signal_features.py`.
 
 ### 5) Returns + abnormal returns (simple event study)
 We link each earnings event to price action using `yfinance` with optional caching (default: `data_raw/prices/`).
@@ -157,10 +185,21 @@ After running the pipeline, `data_processed/events_with_features.parquet` will t
 2. Configure paths and tickers in `config/config.yaml`.
 3. Ingest data: `python src/ingest/hf_ingest.py --config config/config.yaml`
 4. Compute returns: `python src/finance/compute_returns_for_events.py --config config/config.yaml`
-5. Split transcripts: `python src/preprocess/split_all_transcripts.py --config config/config.yaml`
-6. Add sentiment: `python src/features/compute_sentiment_features.py --config config/config.yaml`
-7. Add text stats: `python src/features/compute_text_stats.py --config config/config.yaml`
-8. Explore: run `streamlit run app.py`, open `notebooks/01_exploration.ipynb`, or generate plots/tables with `python -m src.analysis.save_figs_and_tables --config config/config.yaml` (outputs to `assets/plots/` and `data_processed/`).
+5. Normalize transcripts: `python src/preprocess/normalize_transcripts.py --config config/config.yaml`
+6. Split transcripts: `python src/preprocess/split_all_transcripts.py --config config/config.yaml`
+7. Add sentiment: `python src/features/compute_sentiment_features.py --config config/config.yaml`
+8. Add text stats: `python src/features/compute_text_stats.py --config config/config.yaml`
+9. Add signal features: `python src/features/compute_signal_features.py --config config/config.yaml`
+10. Explore: run `streamlit run app.py`, open `notebooks/01_exploration.ipynb`, or generate plots/tables with `python -m src.analysis.save_figs_and_tables --config config/config.yaml` (outputs to `assets/plots/` and `data_processed/`).
+
+## Evaluation (gold set + precision/recall)
+1. Create a small gold label set: `python src/eval/label_gold_set.py --config config/config.yaml`
+2. Fill in the label columns (`trial_update`, `guidance_change`, `safety_signal`, `regulatory_mention`) with 0/1.
+3. Evaluate extraction: `python src/eval/evaluate_signals.py --config config/config.yaml`
+
+Outputs:
+- `data_processed/eval/signal_metrics.csv`
+- `data_processed/eval/signal_failure_modes.csv`
 
 ## Reproducibility
 - Set `hf_dataset_revision` in `config/config.yaml` to pin the HuggingFace dataset commit. The ingest step logs the revision used.

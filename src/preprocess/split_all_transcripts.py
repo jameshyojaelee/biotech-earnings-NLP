@@ -40,7 +40,9 @@ def main() -> None:
     args = parser.parse_args()
 
     config = load_config(Path(args.config))
-    input_path = Path(config.get("events_with_returns_path", "data_processed/events_with_returns.parquet"))
+    metadata_path = Path(config.get("events_with_metadata_path", "data_processed/events_with_metadata.parquet"))
+    returns_path = Path(config.get("events_with_returns_path", "data_processed/events_with_returns.parquet"))
+    input_path = metadata_path if metadata_path.exists() else returns_path
     output_path = Path(config.get("events_with_sections_path", "data_processed/events_with_sections.parquet"))
 
     events = pd.read_parquet(input_path)

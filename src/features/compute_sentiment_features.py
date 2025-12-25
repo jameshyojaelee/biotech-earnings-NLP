@@ -25,10 +25,11 @@ def main() -> None:
     args = parser.parse_args()
 
     config = load_config(Path(args.config))
-    input_path = Path(config.get("events_with_sections_path", "data_processed/events_with_sections.parquet"))
     output_path = Path(config.get("events_with_features_path", "data_processed/events_with_features.parquet"))
+    sections_path = Path(config.get("events_with_sections_path", "data_processed/events_with_sections.parquet"))
+    source_path = output_path if output_path.exists() else sections_path
 
-    events = pd.read_parquet(input_path)
+    events = pd.read_parquet(source_path)
     events_with_sentiment = add_sentiment_features(events)
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

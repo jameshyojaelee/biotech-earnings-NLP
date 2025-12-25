@@ -6,25 +6,8 @@ from typing import Iterable, Tuple
 
 import pandas as pd
 
+from .speaker_roles import classify_speaker_role
 from .transcript_splitter import split_prepared_and_qa
-
-
-MANAGEMENT_TITLES = (
-    "ceo",
-    "cfo",
-    "coo",
-    "cio",
-    "cto",
-    "president",
-    "vice president",
-    "vp",
-    "chairman",
-    "chief",
-    "executive",
-    "founder",
-    "investor relations",
-    "ir",
-)
 
 
 def _normalize_segments(segments: Iterable[object]) -> pd.DataFrame:
@@ -51,17 +34,6 @@ def _normalize_segments(segments: Iterable[object]) -> pd.DataFrame:
     return df
 
 
-def _classify_role(role: str) -> str:
-    role_lower = role.lower()
-    if "analyst" in role_lower:
-        return "analyst"
-    if "operator" in role_lower:
-        return "operator"
-    if any(title in role_lower for title in MANAGEMENT_TITLES):
-        return "management"
-    return "other"
-
-
 def _split_by_segments(segments: Iterable[object]) -> Tuple[str, str]:
     df = _normalize_segments(segments)
     prepared_parts, qa_parts = [], []
@@ -73,7 +45,7 @@ def _split_by_segments(segments: Iterable[object]) -> Tuple[str, str]:
             continue
 
         role = str(row.get("speaker_role", ""))
-        role_type = _classify_role(role)
+        role_type = classify_speaker_role(role)
 
         if role_type == "analyst":
             qa_started = True

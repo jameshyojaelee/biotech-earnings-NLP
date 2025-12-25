@@ -14,7 +14,7 @@ def normalize_transcript(text: str) -> str:
         return ""
     cleaned = text.replace("\r", "\n")
     cleaned = re.sub("\n{2,}", "\n\n", cleaned)
-    cleaned = re.sub("\s+", " ", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned)
     return cleaned.strip()
 
 
@@ -35,6 +35,12 @@ def _find_split_index(text: str) -> int:
     if fallback:
         return fallback.start()
     return -1
+
+
+def find_qa_start(text: str, normalized: bool = False) -> int:
+    """Return the character index where Q&A likely starts, or -1 if unknown."""
+    cleaned = text if normalized else normalize_transcript(text)
+    return _find_split_index(cleaned)
 
 
 def split_prepared_and_qa(text: str) -> Tuple[str, str]:
